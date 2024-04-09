@@ -1,5 +1,3 @@
-#None
-#
 Head,deviceID,deviceTimeStamp,data,androidTimeStamp
 11,F9:07:67:E9:FC:3B,9,"ACC: [-0.12,-0.04,1.00],GYR: [-0.02,-0.02,0.00]",09:54:31.117
 11,F9:07:67:E9:FC:3B,1373,"ACC: [-0.11,-0.04,1.01],GYR: [0.95,-0.11,0.59]",09:54:31.129
