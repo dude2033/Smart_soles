@@ -37,4 +37,5 @@ The video is created frame by frame. Every frame is destroyed immediately to sav
 
 ## TODO
 Adaptive Framerate
+
 Better synchronisation
