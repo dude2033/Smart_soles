@@ -34,3 +34,7 @@ A first image to base the video dimensions is generated here and saved into the 
 
 **Creating the Video**
 The video is created frame by frame. Every frame is destroyed immediately to save space. The "spacing" variable defines the distance between the two images and is inverse meaning a larger value brings the images closer together.
+
+## TODO
+Adaptive Framerate
+Better synchronisation
