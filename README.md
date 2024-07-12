@@ -39,3 +39,5 @@ The video is created frame by frame. Every frame is destroyed immediately to sav
 Adaptive Framerate
 
 Better synchronisation
+
+Fix Bug for different base picture
