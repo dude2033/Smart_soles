@@ -7,12 +7,13 @@ import time
 import readchar
 import cv2
 import numpy as np
+import threading
 import matplotlib.pyplot as plt
 import io
+from scipy.interpolate import Rbf
 from scipy.interpolate import griddata
 from pprint import pformat
 import SmartSoleBle as sble
-from datetime import datetime
 from PIL import Image
 
 
@@ -84,21 +85,30 @@ def main(loglevel):
     log.debug("Devices have been configured")
 
 
+
+    #
+    # --------------------------------------------------------------------------------------------
+    # Settings Relevant to the Visualisation
+    #   spacing: Space between left and right shoe in visualisation
+    #   max_value: maximum expected pressure value in the visualisation
+    #   IDs: mac adresses of left and right sole
+    #
     spacing = 225
-    max_value = 1
+    max_value = 3
     ID_left = 'C6:22:F2:44:38:49'
     ID_right = 'FE:F7:D0:12:2E:8D'
-
-    data_file_name = 'pt_2024-02-22 13:32:51.163741.txt'
-    data_file_path = '../Data/'
 
     left_image_name = 'shoe_outline_left_with_sensors.png'
     right_image_name = 'shoe_outline_right_with_sensors.png'
     image_path = 'Images/'
 
-    output_path = '../Output/'
 
-    full_data_path = data_file_path + data_file_name
+
+
+    #
+    #  ------------------------------------------------
+    #   All of the one time setup before the visualisation
+    #
     full_image_path_left = image_path + left_image_name
     full_image_path_right = image_path + right_image_name
 
@@ -146,9 +156,6 @@ def main(loglevel):
 
     sensor_locations_pixels_left = np.concatenate([sensor_locations_pixels_left, corners_with_midpoints])
 
-
-
-
     sensor_locations_pixels_right = np.array([(182, 510), (180, 345), (200, 213), (161, 92), (135, 185), 
                                             (120, 515), (65, 200), (72, 77)])
 
@@ -181,24 +188,30 @@ def main(loglevel):
     midpoint1 = (midpoint1_x, midpoint_y)
     midpoint2 = (midpoint2_x, midpoint_y)
 
-
     corners_with_midpoints = np.concatenate([corners, [midpoint1, midpoint2]])
-
-
     sensor_locations_pixels_right = np.concatenate([sensor_locations_pixels_right, corners_with_midpoints])
 
+    shoe_outline_right = cv2.imread(full_image_path_right, cv2.IMREAD_UNCHANGED)
+    shoe_outline_left = cv2.imread(full_image_path_left, cv2.IMREAD_UNCHANGED)
+
+    #
+    # -----------------------------------------------------------------------------
+    # Actual visualisation
+    #
+    #
 
     q = ble.getData()
-    time.sleep(5)
+    time.sleep(1)
     log.info(f"queue len is: {q.getQueueSize()}") 
-    
     
     last_left = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     last_right = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     cnt: int = 0
+
     while True:
+        q = ble.getData()
         if q.peek() != None:
-            cnt += 1
+            
             data = q.get()
             log.info(f'{pformat(data)}')
 
@@ -211,7 +224,7 @@ def main(loglevel):
                 data_left = last_left
                 last_right = data_right
 
-            # Process left foot data
+            
             interpolated_pressure_roi_left = griddata(sensor_locations_pixels_left, data_left,
                                                       (x_mesh_roi, y_mesh_roi), method='cubic')
             plt.imshow(interpolated_pressure_roi_left, cmap='coolwarm', origin='lower', vmax=max_value,
@@ -223,10 +236,9 @@ def main(loglevel):
             buf_left.seek(0)
             heatmap_img_left = cv2.imdecode(np.frombuffer(buf_left.getvalue(), dtype=np.uint8), 1)
             buf_left.close()
-            plt.close()
-            heatmap_img_left_bgr = cv2.cvtColor(heatmap_img_left, cv2.COLOR_RGBA2BGR)
+            plt.clf()
 
-            # Process right foot data
+            
             interpolated_pressure_roi_right = griddata(sensor_locations_pixels_right, data_right,
                                                        (x_mesh_roi, y_mesh_roi), method='cubic')
             plt.imshow(interpolated_pressure_roi_right, cmap='coolwarm', origin='lower', vmax=max_value,
@@ -238,28 +250,24 @@ def main(loglevel):
             buf_right.seek(0)
             heatmap_img_right = cv2.imdecode(np.frombuffer(buf_right.getvalue(), dtype=np.uint8), 1)
             buf_right.close()
-            plt.close()
-            heatmap_img_right_bgr = cv2.cvtColor(heatmap_img_right, cv2.COLOR_RGBA2BGR)
+            plt.clf()
 
-            # Adjust images
+            
             heatmap_img_left = heatmap_img_left[:, :-spacing]
             heatmap_img_right = heatmap_img_right[:, spacing:]
             height = max(heatmap_img_left.shape[0], heatmap_img_right.shape[0])
             heatmap_img_left = cv2.resize(heatmap_img_left, (int(heatmap_img_left.shape[1] * height / heatmap_img_left.shape[0]), height))
             heatmap_img_right = cv2.resize(heatmap_img_right, (int(heatmap_img_right.shape[1] * height / heatmap_img_right.shape[0]), height))
 
-            # Combine images and display
             combined_image = cv2.hconcat([heatmap_img_left, heatmap_img_right])
             cv2.imshow('Live Video Feed', combined_image)
-
-            # Exit condition
+            
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         else:
-            # Optional: Add a short delay to avoid busy-waiting
             cv2.waitKey(10)
 
-    cv2.destroyAllWindows()
+    cv2.destroyAllWindows
 
 
     ble.disconnectDevices()
