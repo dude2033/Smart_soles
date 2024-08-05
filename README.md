@@ -9,10 +9,11 @@ Put all csv and other datafiles in here
 Base images for the animation and testing. You should not need to touch this. Both with and without sensors are currently in here.
 
 **Output**
-All output files, whther temporary or otherwise are put in here
+All output files, whesther temporary or otherwise are put in here
 
 **Code**
-All code files are in here, some for testing. The most recent working file is ***HeatmapAnimation.ipynb***.
+All code files are in here, some for testing. The most recent working file for data visualisation is ***HeatmapAnimation.ipynb***.
+For Realtime data visualisation see ***RealTimeREADME.md***
 
 
 ## Current state

@@ -7,10 +7,8 @@ import time
 import readchar
 import cv2
 import numpy as np
-import threading
 import matplotlib.pyplot as plt
 import io
-from scipy.interpolate import Rbf
 from scipy.interpolate import griddata
 from pprint import pformat
 import SmartSoleBle as sble
@@ -66,7 +64,13 @@ def initLogging(name: str, loglevel: int) -> logging.Logger:
     return log
 
 def main(loglevel):
-    
+
+
+    #
+    # Connection Setup
+    # --------------------------------------------------------------------------------------------
+    # Connecting the devices via BLE and initiating logging
+    #
     log = initLogging("SmartSoleConnector", loglevel)
     ble = sble.BLE(log) 
     log.debug("test function starting")
@@ -76,7 +80,7 @@ def main(loglevel):
     scan_end = time.time()
     sc_result = ble.getScanResult()
     log.debug(f"scanned for {scan_end - scan_begin} and found {len(sc_result)} devices")
-    log.debug("connted to devices")
+    log.debug("connected to devices")
     ble.connectDevices()
     log.debug(f"connection sucess ? new ConnectionStatus is: {ble.getConnectionStatus()}")
     log.debug("setup characteristics!")
@@ -87,6 +91,7 @@ def main(loglevel):
 
 
     #
+    # Visualisation Settings
     # --------------------------------------------------------------------------------------------
     # Settings Relevant to the Visualisation
     #   spacing: Space between left and right shoe in visualisation
@@ -106,6 +111,7 @@ def main(loglevel):
 
 
     #
+    # Image Setup
     #  ------------------------------------------------
     #   All of the one time setup before the visualisation
     #
@@ -195,6 +201,7 @@ def main(loglevel):
     shoe_outline_left = cv2.imread(full_image_path_left, cv2.IMREAD_UNCHANGED)
 
     #
+    # Visualisation
     # -----------------------------------------------------------------------------
     # Actual visualisation
     #
