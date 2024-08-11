@@ -99,13 +99,16 @@ def main(loglevel):
     #   IDs: mac adresses of left and right sole
     #
     spacing = 225
-    max_value = 3
+    max_value = 1
     ID_left = 'C6:22:F2:44:38:49'
     ID_right = 'FE:F7:D0:12:2E:8D'
 
     left_image_name = 'shoe_outline_left_with_sensors.png'
     right_image_name = 'shoe_outline_right_with_sensors.png'
     image_path = 'Images/'
+    output_path= 'Output/live.mp4'
+
+    save_video = False
 
 
 
@@ -200,22 +203,58 @@ def main(loglevel):
     shoe_outline_right = cv2.imread(full_image_path_right, cv2.IMREAD_UNCHANGED)
     shoe_outline_left = cv2.imread(full_image_path_left, cv2.IMREAD_UNCHANGED)
 
+
+
     #
     # Visualisation
     # -----------------------------------------------------------------------------
     # Actual visualisation
     #
     #
-
     q = ble.getData()
     time.sleep(1)
     log.info(f"queue len is: {q.getQueueSize()}") 
     
-    last_left = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    last_right = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    data_left = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    interpolated_pressure_roi_left = griddata(sensor_locations_pixels_left, data_left,
+                                            (x_mesh_roi, y_mesh_roi), method='cubic')
+    plt.imshow(interpolated_pressure_roi_left, cmap='coolwarm', origin='lower', vmax=max_value,
+            extent=(roi_left, roi_right, roi_top, roi_bottom))
+    plt.imshow(shoe_outline_left, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
+    plt.axis("off")
+    buf_left = io.BytesIO()
+    plt.savefig(buf_left, format='png')
+    buf_left.seek(0)
+    heatmap_img_left = cv2.imdecode(np.frombuffer(buf_left.getvalue(), dtype=np.uint8), 1)
+    buf_left.close()
+    plt.clf()
+    last_left = heatmap_img_left
+
+
+    data_right = np.array([0,0,0,0,0,0,0,1,0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    interpolated_pressure_roi_right = griddata(sensor_locations_pixels_right, data_right,
+                                            (x_mesh_roi, y_mesh_roi), method='cubic')
+    plt.imshow(interpolated_pressure_roi_right, cmap='coolwarm', origin='lower', vmax=max_value,
+            extent=(roi_left, roi_right, roi_top, roi_bottom))
+    plt.imshow(shoe_outline_right, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
+    plt.axis("off")
+    buf_right = io.BytesIO()
+    plt.savefig(buf_right, format='png')
+    buf_right.seek(0)
+    heatmap_img_right = cv2.imdecode(np.frombuffer(buf_right.getvalue(), dtype=np.uint8), 1)
+    buf_right.close()
+    plt.clf()
+    last_right = heatmap_img_right
+
+    if save_video:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+        out = cv2.VideoWriter(output_path, fourcc, 20.0, (1280, 720)) 
+
+
     cnt: int = 0
 
     while True:
+        cnt += 1
         q = ble.getData()
         if q.peek() != None:
             
@@ -224,40 +263,39 @@ def main(loglevel):
 
             if(data.mac == ID_left):
                 data_left = data.ps_data + [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                data_right = last_right
-                last_left = data_left
+                interpolated_pressure_roi_left = griddata(sensor_locations_pixels_left, data_left,
+                                                        (x_mesh_roi, y_mesh_roi), method='cubic')
+                plt.imshow(interpolated_pressure_roi_left, cmap='coolwarm', origin='lower', vmax=max_value,
+                        extent=(roi_left, roi_right, roi_top, roi_bottom))
+                plt.imshow(shoe_outline_left, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
+                plt.axis("off")
+                buf_left = io.BytesIO()
+                plt.savefig(buf_left, format='png')
+                buf_left.seek(0)
+                heatmap_img_left = cv2.imdecode(np.frombuffer(buf_left.getvalue(), dtype=np.uint8), 1)
+                buf_left.close()
+                plt.clf()
+
+                heatmap_img_right = last_right
+                last_left = heatmap_img_left
+
             elif(data.mac == ID_right):
                 data_right = data.ps_data + [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                data_left = last_left
-                last_right = data_right
-
-            
-            interpolated_pressure_roi_left = griddata(sensor_locations_pixels_left, data_left,
-                                                      (x_mesh_roi, y_mesh_roi), method='cubic')
-            plt.imshow(interpolated_pressure_roi_left, cmap='coolwarm', origin='lower', vmax=max_value,
-                       extent=(roi_left, roi_right, roi_top, roi_bottom))
-            plt.imshow(shoe_outline_left, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
-            plt.axis("off")
-            buf_left = io.BytesIO()
-            plt.savefig(buf_left, format='png')
-            buf_left.seek(0)
-            heatmap_img_left = cv2.imdecode(np.frombuffer(buf_left.getvalue(), dtype=np.uint8), 1)
-            buf_left.close()
-            plt.clf()
-
-            
-            interpolated_pressure_roi_right = griddata(sensor_locations_pixels_right, data_right,
+                interpolated_pressure_roi_right = griddata(sensor_locations_pixels_right, data_right,
                                                        (x_mesh_roi, y_mesh_roi), method='cubic')
-            plt.imshow(interpolated_pressure_roi_right, cmap='coolwarm', origin='lower', vmax=max_value,
-                       extent=(roi_left, roi_right, roi_top, roi_bottom))
-            plt.imshow(shoe_outline_right, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
-            plt.axis("off")
-            buf_right = io.BytesIO()
-            plt.savefig(buf_right, format='png')
-            buf_right.seek(0)
-            heatmap_img_right = cv2.imdecode(np.frombuffer(buf_right.getvalue(), dtype=np.uint8), 1)
-            buf_right.close()
-            plt.clf()
+                plt.imshow(interpolated_pressure_roi_right, cmap='coolwarm', origin='lower', vmax=max_value,
+                        extent=(roi_left, roi_right, roi_top, roi_bottom))
+                plt.imshow(shoe_outline_right, extent=(roi_left, roi_right, roi_top, roi_bottom), alpha=1)
+                plt.axis("off")
+                buf_right = io.BytesIO()
+                plt.savefig(buf_right, format='png')
+                buf_right.seek(0)
+                heatmap_img_right = cv2.imdecode(np.frombuffer(buf_right.getvalue(), dtype=np.uint8), 1)
+                buf_right.close()
+                plt.clf()
+
+                heatmap_img_left = last_left
+                last_right = heatmap_img_right
 
             
             heatmap_img_left = heatmap_img_left[:, :-spacing]
@@ -267,12 +305,23 @@ def main(loglevel):
             heatmap_img_right = cv2.resize(heatmap_img_right, (int(heatmap_img_right.shape[1] * height / heatmap_img_right.shape[0]), height))
 
             combined_image = cv2.hconcat([heatmap_img_left, heatmap_img_right])
-            cv2.imshow('Live Video Feed', combined_image)
-            
+
+            if save_video:
+                out.write(combined_image)
+            else:
+                cv2.imshow('Live Video Feed', combined_image)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            if cnt >= 100:
                 break
         else:
             cv2.waitKey(10)
+
+    if save_video:
+        out.release()
+        print("video released")
+
 
     cv2.destroyAllWindows
 
@@ -280,9 +329,8 @@ def main(loglevel):
     ble.disconnectDevices()
 
     print(f"cnt: {cnt}")
-    print("Press Any Key To Exit")
+    print("Press Any Key To Exit") 	
 
-    k = readchar.readchar()   	
     
     print("Exit")
     sys.exit()
